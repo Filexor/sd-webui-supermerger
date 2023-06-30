@@ -771,6 +771,7 @@ def simggen(prompt, nprompt, steps, sampler, cfg, seed, w, h,genoptions,hrupscal
     p.seed_resize_from_w=0
     p.seed_resize_from_h=0
     p.denoising_strength=None
+    p.scripts = scripts.scripts_txt2img
 
     #"Restore faces", "Tiling", "Hires. fix"
 
