@@ -20,6 +20,8 @@ from modules.ui import  plaintext_to_html
 from modules.shared import opts
 from modules.processing import create_infotext,Processed
 from modules.sd_models import  load_model,checkpoints_loaded
+import modules.scripts as modules_scripts
+from modules.generation_parameters_copypaste import create_override_settings_dict
 from scripts.mergers.model_util import usemodelgen,filenamecutter,savemodel
 
 from inspect import currentframe
@@ -55,10 +57,9 @@ def casterr(*args,hear=hear):
 def smergegen(weights_a,weights_b,model_a,model_b,model_c,base_alpha,base_beta,mode,
                        calcmode,useblocks,custom_name,save_sets,id_sets,wpresets,deep,tensor,bake_in_vae,
                        esettings,
-                       prompt,nprompt,steps,sampler,cfg,seed,w,h,
-                       hireson,hrupscaler,hr2ndsteps,denoise_str,hr_scale,
-                       s_prompt,s_nprompt,s_steps,s_sampler,s_cfg,s_seed,s_w,s_h,batch_size,
-                       currentmodel,imggen):
+                       s_prompt,s_nprompt,s_steps,s_sampler,s_cfg,s_seed,s_w,s_h,s_batch_size,
+                       currentmodel,imggen,
+                       id_task: str, prompt: str, negative_prompt: str, prompt_styles, steps: int, sampler_index: int, restore_faces: bool, tiling: bool, n_iter: int, batch_size: int, cfg_scale: float, seed: int, subseed: int, subseed_strength: float, seed_resize_from_h: int, seed_resize_from_w: int, seed_enable_extras: bool, height: int, width: int, enable_hr: bool, denoising_strength: float, hr_scale: float, hr_upscaler: str, hr_second_pass_steps: int, hr_resize_x: int, hr_resize_y: int, hr_sampler_index: int, hr_prompt: str, hr_negative_prompt, override_settings_texts, *args):
 
     deepprint  = True if "print change" in esettings else False
 
@@ -79,8 +80,9 @@ def smergegen(weights_a,weights_b,model_a,model_b,model_c,base_alpha,base_beta,m
     gc.collect()
 
     if imggen :
-        images = simggen(prompt,nprompt,steps,sampler,cfg,seed,w,h,hireson,hrupscaler,hr2ndsteps,denoise_str,hr_scale,
-                                    s_prompt,s_nprompt,s_steps,s_sampler,s_cfg,s_seed,s_w,s_h,batch_size,currentmodel,id_sets,modelid)
+        images = simggen(s_prompt,s_nprompt,s_steps,s_sampler,s_cfg,s_seed,s_w,s_h,s_batch_size,currentmodel,id_sets,modelid,
+                        id_task, prompt, negative_prompt, prompt_styles, steps, sampler_index, restore_faces, tiling, n_iter, batch_size, cfg_scale, seed, subseed, subseed_strength, seed_resize_from_h, seed_resize_from_w, seed_enable_extras, height, width, enable_hr, denoising_strength, hr_scale, hr_upscaler, hr_second_pass_steps, hr_resize_x, hr_resize_y, hr_sampler_index, hr_prompt, hr_negative_prompt, override_settings_texts, *args)
+
         return result,currentmodel,*images[:4]
     else:
         return result,currentmodel
@@ -750,27 +752,60 @@ def longhashfromname(name):
     checkpoint_info.calculate_shorthash()
     return checkpoint_info.sha256
 
-def simggen(prompt, nprompt, steps, sampler, cfg, seed, w, h,genoptions,hrupscaler,hr2ndsteps,denoise_str,hr_scale,
-                   s_prompt,s_nprompt,s_steps,s_sampler,s_cfg,s_seed,s_w,s_h,batch_size,mergeinfo="",id_sets=[],modelid = "no id"):
+def simggen(s_prompt,s_nprompt,s_steps,s_sampler,s_cfg,s_seed,s_w,s_h,s_batch_size,mergeinfo,id_sets,modelid,
+                   id_task: str, prompt: str, negative_prompt: str, prompt_styles, steps: int, sampler_index: int, restore_faces: bool, tiling: bool, n_iter: int, batch_size: int, cfg_scale: float, seed: int, subseed: int, subseed_strength: float, seed_resize_from_h: int, seed_resize_from_w: int, seed_enable_extras: bool, height: int, width: int, enable_hr: bool, denoising_strength: float, hr_scale: float, hr_upscaler: str, hr_second_pass_steps: int, hr_resize_x: int, hr_resize_y: int, hr_sampler_index: int, hr_prompt: str, hr_negative_prompt, override_settings_texts, *args):
     shared.state.begin()
+    override_settings = create_override_settings_dict(override_settings_texts)
     p = processing.StableDiffusionProcessingTxt2Img(
         sd_model=shared.sd_model,
+        outpath_samples=opts.outdir_samples or opts.outdir_txt2img_samples,
+        outpath_grids=opts.outdir_grids or opts.outdir_txt2img_grids,
+        prompt=prompt,
+        styles=prompt_styles,
+        negative_prompt=negative_prompt,
+        seed=seed,
+        subseed=subseed,
+        subseed_strength=subseed_strength,
+        seed_resize_from_h=seed_resize_from_h,
+        seed_resize_from_w=seed_resize_from_w,
+        seed_enable_extras=seed_enable_extras,
+        sampler_name=sd_samplers.samplers[sampler_index].name,
+        batch_size=batch_size,
+        n_iter=n_iter,
+        steps=steps,
+        cfg_scale=cfg_scale,
+        width=width,
+        height=height,
+        restore_faces=restore_faces,
+        tiling=tiling,
+        enable_hr=enable_hr,
+        denoising_strength=denoising_strength if enable_hr else None,
+        hr_scale=hr_scale,
+        hr_upscaler=hr_upscaler,
+        hr_second_pass_steps=hr_second_pass_steps,
+        hr_resize_x=hr_resize_x,
+        hr_resize_y=hr_resize_y,
+        hr_sampler_name=sd_samplers.samplers_for_img2img[hr_sampler_index - 1].name if hr_sampler_index != 0 else None,
+        hr_prompt=hr_prompt,
+        hr_negative_prompt=hr_negative_prompt,
+        override_settings=override_settings,
         do_not_save_grid=True,
         do_not_save_samples=True,
         do_not_reload_embeddings=True,
     )
-    p.batch_size = int(batch_size)
+
+    p.batch_size = int(s_batch_size)
     p.prompt = prompt if s_prompt == "" else s_prompt
-    p.negative_prompt = nprompt if s_nprompt == "" else s_nprompt
+    p.negative_prompt = negative_prompt if s_nprompt == "" else s_nprompt
     p.steps = steps if s_steps == 0 else s_steps
     try:
-        p.sampler_name = sd_samplers.samplers[sampler].name if s_sampler == 0 or s_sampler == None else sd_samplers.samplers[s_sampler-1].name
+        p.sampler_name = sd_samplers.samplers[sampler_index].name if s_sampler == 0 or s_sampler == None else sd_samplers.samplers[s_sampler-1].name
     except:
         print(f"error:sampler:{sampler},s_sampler:{s_sampler}")
-    p.cfg_scale = cfg  if s_cfg == 0 else s_cfg
+    p.cfg_scale = cfg_scale  if s_cfg == 0 else s_cfg
     p.seed = seed  if s_seed == 0 else s_seed
-    p.width = w  if s_w == 0 else s_w
-    p.height = h  if s_h == 0 else s_h
+    p.width = width  if s_w == 0 else s_w
+    p.height = height  if s_h == 0 else s_h
     p.seed_resize_from_w=0
     p.seed_resize_from_h=0
     p.denoising_strength=None
@@ -781,20 +816,8 @@ def simggen(prompt, nprompt, steps, sampler, cfg, seed, w, h,genoptions,hrupscal
     p.cached_hr_c = [None, None]
     p.cached_hr_uc = [None, None]
 
-    #"Restore faces", "Tiling", "Hires. fix"
-
-    if "Hires. fix" in genoptions:
-        p.enable_hr = True
-        p.denoising_strength = denoise_str
-        p.hr_upscaler = hrupscaler
-        p.hr_second_pass_steps = hr2ndsteps
-        p.hr_scale = hr_scale
-    
-    if "Tiling" in genoptions:
-        p.tiling = True
-
-    if "Restore faces" in genoptions:
-        p.restore_faces = True
+    p.scripts = modules_scripts.scripts_txt2img
+    p.script_args = args
 
     if type(p.prompt) == list:
         p.all_prompts = [shared.prompt_styles.apply_styles_to_prompt(x, p.styles) for x in p.prompt]
@@ -809,7 +832,7 @@ def simggen(prompt, nprompt, steps, sampler, cfg, seed, w, h,genoptions,hrupscal
     processed:Processed = processing.process_images(p)
     if "image" in id_sets:
         for i, image in enumerate(processed.images):
-            processed.images[i] = draw_origin(image, str(modelid),w,h,w)
+            processed.images[i] = draw_origin(image, str(modelid),width,height,width)
 
     if "PNG info" in id_sets:mergeinfo = mergeinfo + " ID " + str(modelid)
 

@@ -10,6 +10,7 @@ from pprint import pprint
 import gradio as gr
 from modules import (devices, script_callbacks, scripts, sd_hijack, sd_models,sd_vae, shared)
 from modules.scripts import basedir
+import modules.scripts as modules_scripts
 from modules.sd_models import checkpoints_loaded
 from modules.shared import opts
 from modules.sd_samplers import samplers
@@ -372,43 +373,43 @@ def on_ui_tabs():
 
         merge.click(
             fn=smergegen,
-            inputs=[*msettings,esettings1,*gensets.txt2img_preview_params,*hiresfix,*genparams,currentmodel,dfalse],
+            inputs=[*msettings,esettings1,*genparams,currentmodel,dfalse],
             outputs=[submit_result,currentmodel]
         )
 
         mergeandgen.click(
             fn=smergegen,
-            inputs=[*msettings,esettings1,*gensets.txt2img_preview_params,*hiresfix,*genparams,currentmodel,dtrue],
+            inputs=[*msettings,esettings1,*genparams,currentmodel,dtrue] + modules_scripts.inputs_txt2img,
             outputs=[submit_result,currentmodel,*imagegal]
         )
 
         gen.click(
             fn=simggen,
-            inputs=[*gensets.txt2img_preview_params,*hiresfix,*genparams,currentmodel,id_sets],
+            inputs=[*genparams,currentmodel,id_sets] + modules_scripts.inputs_txt2img,
             outputs=[*imagegal],
         )
 
         s_reserve.click(
             fn=numanager,
-            inputs=[gr.Textbox(value="reserve",visible="False"),*xysettings,*msettings,*gensets.txt2img_preview_params,*hiresfix,*genparams],
+            inputs=[gr.Textbox(value="reserve",visible="False"),*xysettings,*msettings,*genparams] + modules_scripts.inputs_txt2img,
             outputs=[numaframe]
         )
 
         s_reserve1.click(
             fn=numanager,
-            inputs=[gr.Textbox(value="reserve",visible="False"),*xysettings,*msettings,*gensets.txt2img_preview_params,*hiresfix,*genparams],
+            inputs=[gr.Textbox(value="reserve",visible="False"),*xysettings,*msettings,*genparams] + modules_scripts.inputs_txt2img,
             outputs=[numaframe]
         )
 
         gengrid.click(
             fn=numanager,
-            inputs=[gr.Textbox(value="normal",visible="False"),*xysettings,*msettings,*gensets.txt2img_preview_params,*hiresfix,*genparams],
+            inputs=[gr.Textbox(value="normal",visible="False"),*xysettings,*msettings,*genparams] + modules_scripts.inputs_txt2img,
             outputs=[submit_result,currentmodel,*imagegal],
         )
 
         s_startreserve.click(
             fn=numanager,
-            inputs=[gr.Textbox(value=" ",visible="False"),*xysettings,*msettings,*gensets.txt2img_preview_params,*hiresfix,*genparams],
+            inputs=[gr.Textbox(value=" ",visible="False"),*xysettings,*msettings,*genparams] + modules_scripts.inputs_txt2img,
             outputs=[submit_result,currentmodel,*imagegal],
         )
 
