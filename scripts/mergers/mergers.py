@@ -801,7 +801,7 @@ def simggen(s_prompt,s_nprompt,s_steps,s_sampler,s_cfg,s_seed,s_w,s_h,s_batch_si
     try:
         p.sampler_name = sd_samplers.samplers[sampler_index].name if s_sampler == 0 or s_sampler == None else sd_samplers.samplers[s_sampler-1].name
     except:
-        print(f"error:sampler:{sampler},s_sampler:{s_sampler}")
+        print(f"error:sampler:{sampler_index},s_sampler:{s_sampler}")
     p.cfg_scale = cfg_scale  if s_cfg == 0 else s_cfg
     p.seed = seed  if s_seed == 0 else s_seed
     p.width = width  if s_w == 0 else s_w
